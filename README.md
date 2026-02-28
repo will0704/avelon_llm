@@ -42,18 +42,27 @@ avelon_llm/
 ├── app/
 │   ├── main.py              # FastAPI entry point
 │   ├── config.py            # Settings
-│   ├── api/
-│   │   ├── routes/
-│   │   │   ├── health.py    # Health checks
-│   │   │   ├── verify.py    # Document verification
-│   │   │   └── score.py     # Credit scoring
-│   │   └── dependencies.py  # API key auth
+│   ├── api/routes/          # API endpoints
 │   ├── schemas/             # Pydantic models
-│   └── services/            # AI model wrappers
+│   ├── services/            # AI model wrappers
+│   └── models/              # Trained model weights
+├── notebooks/               # Training notebooks
+├── data/                    # Training data
 ├── requirements.txt
 ├── Dockerfile
 └── .env.example
 ```
+
+## 🤖 AI Services
+
+| Service | Technology | Status |
+|---------|------------|--------|
+| **Classifier** | PyTorch MobileNetV2 | ✅ Trained |
+| **OCR/Extractor** | EasyOCR (EN + Tagalog) | ✅ Ready |
+| **NER** | BERT (HuggingFace) | ✅ Ready |
+| **Fraud Detector** | OpenCV + XGBoost | ⏳ Pending |
+| **Credit Scorer** | XGBoost | ⏳ Pending |
+| **ETH Volatility Predictor** | LSTM / Time-Series Model | 📋 Planned |
 
 ## 🔌 API Endpoints
 
@@ -63,6 +72,7 @@ avelon_llm/
 | POST | `/api/v1/verify/document` | Verify single document |
 | POST | `/api/v1/verify/complete` | Complete KYC verification |
 | POST | `/api/v1/score/calculate` | Calculate credit score |
+| GET | `/api/v1/predict/volatility` | ETH volatility prediction |
 
 ## 🔐 Authentication
 

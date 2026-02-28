@@ -64,27 +64,86 @@ class ScorerService:
     
     def _calculate_document_score(self, data: Dict[str, Any]) -> float:
         """Calculate document verification score (max 40 points)."""
-        # TODO: Implement based on document verification results
-        # - Valid Government ID: +15
-        # - Proof of Income: +15
-        # - Proof of Address: +10
-        # Penalties for issues
-        return 0.0
+        score = 0.0
+        
+        # Check for verified documents
+        documents = data.get("verified_documents", {})
+        
+        # Valid Government ID: +15
+        gov_id = documents.get("government_id", {})
+        if gov_id.get("is_verified", False):
+            score += 15
+            # Bonus for high confidence
+            if gov_id.get("confidence", 0) > 0.9:
+                score += 2
+        
+        # Proof of Income: +15
+        income_doc = documents.get("proof_of_income", {})
+        if income_doc.get("is_verified", False):
+            score += 15
+        
+        # Proof of Address: +10
+        address_doc = documents.get("proof_of_address", {})
+        if address_doc.get("is_verified", False):
+            score += 10
+        
+        # Penalties for fraud flags
+        fraud_flags = data.get("fraud_flags", [])
+        for flag in fraud_flags:
+            if flag.get("severity") == "high":
+                score -= 10
+            elif flag.get("severity") == "medium":
+                score -= 5
+        
+        return max(0, min(40, score))
     
     def _calculate_financial_score(self, data: Dict[str, Any]) -> float:
         """Calculate financial indicators score (max 35 points)."""
-        # TODO: Implement based on income and employment
-        # Income brackets (PHP):
-        # - Below 15k: +5
-        # - 15k-30k: +8
-        # - 30k-50k: +10
-        # - 50k-100k: +12
-        # - Above 100k: +15
-        # Employment type:
-        # - Permanent: +10
-        # - Contract: +7
-        # - Self-employed: +5
-        return 0.0
+        score = 0.0
+        
+        # Get monthly income (PHP)
+        monthly_income = data.get("monthly_income", 0)
+        
+        # Income brackets (PHP)
+        if monthly_income >= 100000:
+            score += 15
+        elif monthly_income >= 50000:
+            score += 12
+        elif monthly_income >= 30000:
+            score += 10
+        elif monthly_income >= 15000:
+            score += 8
+        elif monthly_income > 0:
+            score += 5
+        
+        # Employment type score
+        employment_type = data.get("employment_type", "").lower()
+        if employment_type == "permanent":
+            score += 10
+        elif employment_type == "contract":
+            score += 7
+        elif employment_type == "self-employed":
+            score += 5
+        elif employment_type:
+            score += 3  # Some employment is better than none
+        
+        # Employment duration bonus (years)
+        years_employed = data.get("years_employed", 0)
+        if years_employed >= 5:
+            score += 5
+        elif years_employed >= 2:
+            score += 3
+        elif years_employed >= 1:
+            score += 1
+        
+        # Debt-to-income ratio penalty
+        dti_ratio = data.get("debt_to_income_ratio", 0)
+        if dti_ratio > 0.5:
+            score -= 5
+        elif dti_ratio > 0.3:
+            score -= 2
+        
+        return max(0, min(35, score))
     
     def _calculate_history_score(self, history: Optional[LoanHistory]) -> float:
         """Calculate Avelon history score (max 15 points)."""

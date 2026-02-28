@@ -9,6 +9,8 @@ from typing import Optional, Dict, Any
 class DocumentType(str, Enum):
     """Types of documents accepted for KYC verification."""
     GOVERNMENT_ID = "government_id"
+    GOVERNMENT_ID_BACK = "government_id_back"
+    E_SIGNATURE = "e_signature"
     PROOF_OF_INCOME = "proof_of_income"
     PROOF_OF_ADDRESS = "proof_of_address"
 

@@ -28,6 +28,17 @@ class Settings(BaseSettings):
     ner_model_path: Optional[str] = None
     fraud_model_path: Optional[str] = None
     scorer_model_path: Optional[str] = None
+    philid_model_path: Optional[str] = None  # PyTorch MobileNetV2 for PhilID
+    
+    # OCR Configuration
+    tesseract_path: Optional[str] = None  # Path to tesseract executable (Windows)
+    
+    # NER Configuration  
+    ner_model_name: str = "dslim/bert-base-NER"  # Default HuggingFace model
+    
+    # Processing Thresholds
+    confidence_threshold: float = 0.7  # Minimum confidence for entity extraction
+    fraud_threshold: float = 0.4  # Threshold for flagging suspicious documents
     
     class Config:
         env_file = ".env"
