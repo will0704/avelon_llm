@@ -91,7 +91,7 @@ async def calculate_credit_score(
         )
     except Exception as e:
         logger.exception("Credit score calculation failed")
-        raise HTTPException(status_code=500, detail=f"Scoring error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal scoring error")
 
     recommendations = _build_recommendations(tier, breakdown)
 
@@ -136,7 +136,7 @@ async def recalculate_credit_score(
         )
     except Exception as e:
         logger.exception("Credit score recalculation failed")
-        raise HTTPException(status_code=500, detail=f"Scoring error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal scoring error")
 
     recommendations = _build_recommendations(tier, breakdown)
 
