@@ -1,9 +1,21 @@
 """
 Credit Scorer Service
-Uses XGBoost for credit score calculation.
+Uses XGBoost for credit score calculation with rule-based fallback.
 """
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List
+import logging
+import os
+
+try:
+    import xgboost as xgb
+    import numpy as np
+    XGB_AVAILABLE = True
+except ImportError:
+    XGB_AVAILABLE = False
+
 from app.schemas.score import ScoreBreakdown, LoanHistory
+
+logger = logging.getLogger(__name__)
 
 
 class ScorerService:
@@ -17,18 +29,90 @@ class ScorerService:
     - Wallet Analysis: 10 points max
     """
     
-    def __init__(self, model_path: str = None):
+    # Feature names expected by the XGBoost model
+    FEATURE_NAMES = [
+        'gov_id_verified', 'gov_id_confidence',
+        'income_verified', 'address_verified',
+        'fraud_flag_count', 'fraud_high_count',
+        'monthly_income', 'years_employed',
+        'debt_to_income_ratio', 'employment_score',
+        'total_loans', 'repaid_loans', 'defaulted_loans', 'late_payments',
+        'wallet_age_days', 'wallet_tx_count', 'wallet_balance_eth',
+    ]
+    
+    def __init__(self, model_path: Optional[str] = None):
         self.model_path = model_path
         self.model = None
         self._load_model()
     
     def _load_model(self):
-        """Load the trained scorer model."""
-        if self.model_path:
-            # TODO: Load XGBoost model
-            # self.model = xgb.Booster()
-            # self.model.load_model(self.model_path)
-            pass
+        """Load the trained XGBoost scorer model."""
+        if not XGB_AVAILABLE:
+            logger.warning("xgboost not available, using rule-based scoring only")
+            return
+        
+        if not self.model_path or not os.path.exists(self.model_path):
+            logger.info("No valid scorer model path, using rule-based scoring only")
+            return
+        
+        try:
+            self.model = xgb.Booster()
+            self.model.load_model(self.model_path)
+            logger.info(f"XGBoost scorer loaded from {self.model_path}")
+        except Exception as e:
+            logger.warning(f"Failed to load scorer model: {e}")
+            self.model = None
+    
+    @property
+    def ml_model_loaded(self) -> bool:
+        """Check if the XGBoost model is loaded."""
+        return self.model is not None
+    
+    def engineer_features(
+        self,
+        extracted_data: Dict[str, Any],
+        wallet_data: Dict[str, Any],
+        loan_history: Optional[LoanHistory] = None,
+    ) -> List[float]:
+        """
+        Engineer feature vector from raw scoring inputs.
+        
+        Returns:
+            List of numeric feature values matching FEATURE_NAMES order.
+        """
+        documents = extracted_data.get("verified_documents", {})
+        gov_id = documents.get("government_id", {})
+        income_doc = documents.get("proof_of_income", {})
+        address_doc = documents.get("proof_of_address", {})
+        fraud_flags = extracted_data.get("fraud_flags", [])
+        
+        # Employment type → numeric score
+        emp_type = extracted_data.get("employment_type", "").lower()
+        emp_scores = {"permanent": 4, "contract": 3, "self-employed": 2}
+        employment_score = emp_scores.get(emp_type, 1) if emp_type else 0
+        
+        # Loan history
+        history = loan_history or LoanHistory()
+        
+        return [
+            float(gov_id.get("is_verified", False)),
+            float(gov_id.get("confidence", 0.0)),
+            float(income_doc.get("is_verified", False)),
+            float(address_doc.get("is_verified", False)),
+            float(len(fraud_flags)),
+            float(sum(1 for f in fraud_flags if f.get("severity") == "high")),
+            float(extracted_data.get("monthly_income", 0)),
+            float(extracted_data.get("years_employed", 0)),
+            float(extracted_data.get("debt_to_income_ratio", 0)),
+            float(employment_score),
+            float(history.total_loans),
+            float(history.repaid_loans),
+            float(history.defaulted_loans),
+            float(history.late_payments),
+            float(wallet_data.get("age_days", 0)),
+            float(wallet_data.get("transaction_count", 0)),
+            float(wallet_data.get("balance_eth", 0)),
+        ]
     
     def calculate_score(
         self,
@@ -39,17 +123,39 @@ class ScorerService:
         """
         Calculate credit score.
         
+        When ML model is loaded, blends XGBoost prediction (70%)
+        with rule-based score (30%). Otherwise uses rules only.
+        
         Returns:
             Tuple of (total_score, breakdown, tier)
         """
-        # Calculate individual components
+        # Calculate rule-based components
         doc_score = self._calculate_document_score(extracted_data)
         financial_score = self._calculate_financial_score(extracted_data)
         history_score = self._calculate_history_score(loan_history)
         wallet_score = self._calculate_wallet_score(wallet_data)
         
-        total_score = int(doc_score + financial_score + history_score + wallet_score)
-        total_score = max(0, min(100, total_score))  # Clamp to 0-100
+        rule_score = int(doc_score + financial_score + history_score + wallet_score)
+        rule_score = max(0, min(100, rule_score))
+        
+        # Blend with ML model if available
+        if self.ml_model_loaded and XGB_AVAILABLE:
+            try:
+                features = self.engineer_features(extracted_data, wallet_data, loan_history)
+                dmatrix = xgb.DMatrix(
+                    np.array([features]),
+                    feature_names=self.FEATURE_NAMES,
+                )
+                ml_score = float(self.model.predict(dmatrix)[0])
+                ml_score = max(0.0, min(100.0, ml_score))
+                total_score = int(0.7 * ml_score + 0.3 * rule_score)
+            except Exception as e:
+                logger.warning(f"ML scoring failed, using rules only: {e}")
+                total_score = rule_score
+        else:
+            total_score = rule_score
+        
+        total_score = max(0, min(100, total_score))
         
         breakdown = ScoreBreakdown(
             document_score=doc_score,
