@@ -15,7 +15,7 @@ class TestClassifierService:
     @pytest.fixture
     def service(self):
         """Create a classifier service instance (without model)."""
-        return ClassifierService(model_path=None)
+        return ClassifierService(model_path="/nonexistent/model.pt")
     
     @pytest.fixture
     def test_image_bytes(self):
