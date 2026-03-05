@@ -96,11 +96,21 @@ async def _verify_single_document(
     elif fraud_result.recommendation == "reject":
         message = "Document rejected due to high fraud probability."
 
+    # Sanitize values for JSON serialization (EasyOCR returns numpy types)
+    def _sanitize(obj):
+        if isinstance(obj, dict):
+            return {k: _sanitize(v) for k, v in obj.items()}
+        if isinstance(obj, list):
+            return [_sanitize(v) for v in obj]
+        if hasattr(obj, 'item'):  # numpy scalar
+            return obj.item()
+        return obj
+
     return {
         "valid": is_document_valid,
         "document_type": expected_type,
-        "confidence": round(effective_confidence, 4),
-        "extracted_data": extracted_dict,
+        "confidence": float(round(effective_confidence, 4)),
+        "extracted_data": _sanitize(extracted_dict),
         "fraud_indicators": fraud_indicators,
         "message": message,
     }
@@ -141,7 +151,7 @@ async def verify_document(
         result = await _verify_single_document(image_bytes, document_type)
     except Exception as e:
         logger.exception("Document verification failed")
-        raise HTTPException(status_code=500, detail=f"Verification error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal verification error")
 
     return DocumentVerifyResponse(**result)
 
@@ -187,7 +197,13 @@ async def complete_verification(
             document_scores[doc_type.value] = 0.0
             continue
 
-        result = await _verify_single_document(image_bytes, doc_type)
+        try:
+            result = await _verify_single_document(image_bytes, doc_type)
+        except Exception:
+            logger.exception("Document verification failed for %s", doc_type.value)
+            rejection_reasons.append(f"{doc_type.value} verification failed")
+            document_scores[doc_type.value] = 0.0
+            continue
 
         document_scores[doc_type.value] = result["confidence"]
         all_fraud_flags.extend(result["fraud_indicators"])
@@ -231,7 +247,7 @@ async def complete_verification(
         )
     except Exception as e:
         logger.exception("Credit scoring failed")
-        raise HTTPException(status_code=500, detail=f"Scoring error: {str(e)}")
+        raise HTTPException(status_code=500, detail="Internal scoring error")
 
     # Determine status
     if rejection_reasons:

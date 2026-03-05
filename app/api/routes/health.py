@@ -28,8 +28,10 @@ def _get_model_status() -> dict:
         "document_classifier": classifier.is_loaded,
         "ner_extractor": extractor.is_available,
         "ocr_engine": ocr.is_available,
-        "fraud_detector": True,  # rule-based, always available
-        "credit_scorer": True,   # rule-based, always available
+        "fraud_detector": True,           # rule-based, always available
+        "fraud_detector_ml": fraud.ml_model_loaded,
+        "credit_scorer": True,             # rule-based, always available
+        "credit_scorer_ml": scorer.ml_model_loaded,
         "preprocessing": preprocessing._cv2_available,
     }
 

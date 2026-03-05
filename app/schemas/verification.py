@@ -1,10 +1,14 @@
 """
 Verification request/response schemas.
 """
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from typing import Optional, Dict, Any, List
 
 from app.schemas.document import DocumentType
+
+
+# 10MB base64 ≈ 14MB encoded string
+MAX_BASE64_LENGTH = 14 * 1024 * 1024
 
 
 class DocumentVerifyRequest(BaseModel):
@@ -35,10 +39,10 @@ class CompleteVerificationRequest(BaseModel):
     """Request for complete KYC verification."""
     user_id: str
     
-    # Document images (base64 encoded)
-    government_id_base64: str
-    proof_of_income_base64: str
-    proof_of_address_base64: str
+    # Document images (base64 encoded, max ~10MB decoded per image)
+    government_id_base64: str = Field(..., max_length=MAX_BASE64_LENGTH)
+    proof_of_income_base64: str = Field(..., max_length=MAX_BASE64_LENGTH)
+    proof_of_address_base64: str = Field(..., max_length=MAX_BASE64_LENGTH)
     
     # Wallet data
     wallet_data: WalletData

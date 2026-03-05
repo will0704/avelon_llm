@@ -2,8 +2,8 @@
 Fraud detection schemas.
 """
 from enum import Enum
+from typing import Literal, List, Optional
 from pydantic import BaseModel
-from typing import List, Optional
 
 
 class FraudFlagType(str, Enum):
@@ -21,7 +21,7 @@ class FraudFlag(BaseModel):
     """Individual fraud indicator."""
     flag_type: FraudFlagType
     description: str
-    severity: str  # "low", "medium", "high"
+    severity: Literal["low", "medium", "high"]
     confidence: float  # 0.0 to 1.0
 
 
