@@ -3,6 +3,7 @@ Configuration settings for Avelon LLM service.
 """
 from functools import lru_cache
 from pydantic_settings import BaseSettings
+from pydantic import model_validator
 from typing import Optional
 
 
@@ -39,11 +40,23 @@ class Settings(BaseSettings):
     # Processing Thresholds
     confidence_threshold: float = 0.7  # Minimum confidence for entity extraction
     fraud_threshold: float = 0.4  # Threshold for flagging suspicious documents
-    
-    class Config:
-        env_file = ".env"
-        env_file_encoding = "utf-8"
-        case_sensitive = False
+
+    model_config = {
+        "env_file": ".env",
+        "env_file_encoding": "utf-8",
+        "case_sensitive": False,
+    }
+
+    @model_validator(mode="after")
+    def _reject_default_key_in_production(self) -> "Settings":
+        if (
+            self.environment == "production"
+            and self.api_key == "dev-api-key-change-in-production"
+        ):
+            raise ValueError(
+                "API_KEY must be changed from the default value in production"
+            )
+        return self
 
 
 @lru_cache()
