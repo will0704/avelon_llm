@@ -65,7 +65,7 @@ class EntityExtractorService:
             r'\b\d{1,3}(?:,\d{3})*(?:\.\d{2})?\b',  # Comma-separated
         ],
         "phone": [
-            r'\b(?:\+63|0)\d{3}[-\s]?\d{3}[-\s]?\d{4}\b',  # Philippine phone
+            r'(?:\+63|0)[-\s]?\d{3}[-\s]?\d{3}[-\s]?\d{4}\b',  # Philippine phone
         ],
     }
     
