@@ -49,13 +49,30 @@ class ClassifierService:
     """
     Unified document classifier using trained MobileNetV2 model.
     
-    Currently supports:
+    Supports:
     - government_id (trained with PhilID data)
-    
-    Architecture ready for:
-    - proof_of_income (add training data)
-    - proof_of_address (add training data)
+    - proof_of_income
+    - proof_of_address
     """
+    
+    # Class name → DocumentType mapping for all recognized class names
+    CLASS_MAPPING: Dict[str, 'DocumentType'] = {
+        # ID-related
+        'id': DocumentType.GOVERNMENT_ID,
+        'valid': DocumentType.GOVERNMENT_ID,
+        'validid': DocumentType.GOVERNMENT_ID,
+        'valid_id': DocumentType.GOVERNMENT_ID,
+        'government_id': DocumentType.GOVERNMENT_ID,
+        'philid': DocumentType.GOVERNMENT_ID,
+        # Income-related
+        'income': DocumentType.PROOF_OF_INCOME,
+        'proof_of_income': DocumentType.PROOF_OF_INCOME,
+        'payslip': DocumentType.PROOF_OF_INCOME,
+        # Address-related
+        'address': DocumentType.PROOF_OF_ADDRESS,
+        'proof_of_address': DocumentType.PROOF_OF_ADDRESS,
+        'utility_bill': DocumentType.PROOF_OF_ADDRESS,
+    }
     
     def __init__(self, model_path: Optional[str] = None):
         self.settings = get_settings()
@@ -125,27 +142,20 @@ class ClassifierService:
         return tensor.to(self.device)
     
     def _map_to_document_type(self, class_name: str, confidence: float) -> Tuple[DocumentType, float]:
-        """Map model class to DocumentType enum."""
+        """Map model class to DocumentType enum using CLASS_MAPPING."""
         class_lower = class_name.lower()
         
-        # ID-related classes → GOVERNMENT_ID
-        if class_lower in ['id', 'valid', 'government_id', 'philid']:
-            return (DocumentType.GOVERNMENT_ID, confidence)
-        
-        # Not an ID → return with low confidence to indicate uncertainty
-        elif class_lower in ['not_id', 'invalid']:
-            # Still might be another document type, but we're not sure
+        # Negative classes → zero confidence
+        negative_names = {'not_id', 'invalid', 'nonvalid', 'non_valid', 'not_valid'}
+        if class_lower in negative_names:
             return (DocumentType.GOVERNMENT_ID, 0.0)
         
-        # Income-related
-        elif class_lower in ['income', 'proof_of_income', 'payslip']:
-            return (DocumentType.PROOF_OF_INCOME, confidence)
+        # Look up in CLASS_MAPPING
+        doc_type = self.CLASS_MAPPING.get(class_lower)
+        if doc_type is not None:
+            return (doc_type, confidence)
         
-        # Address-related
-        elif class_lower in ['address', 'proof_of_address', 'utility_bill']:
-            return (DocumentType.PROOF_OF_ADDRESS, confidence)
-        
-        # Default
+        # Unknown class fallback
         return (DocumentType.GOVERNMENT_ID, 0.0)
     
     def classify(self, image_bytes: bytes) -> Tuple[DocumentType, float]:

@@ -52,7 +52,9 @@ class TestPreprocessingService:
     
     def test_validate_image_invalid_data(self, service):
         """Test validation fails for invalid image data."""
-        is_valid, error = service.validate_image(b"not an image at all")
+        # Data must be >= 100 bytes to bypass size check and reach image parsing
+        invalid_data = b"not an image at all" * 10
+        is_valid, error = service.validate_image(invalid_data)
         assert is_valid is False
         assert "Invalid" in error
     
