@@ -112,6 +112,7 @@ async def _verify_single_document(
         "confidence": float(round(effective_confidence, 4)),
         "extracted_data": _sanitize(extracted_dict),
         "fraud_indicators": fraud_indicators,
+        "fraud_probability": float(round(fraud_result.fraud_probability, 4)),
         "message": message,
     }
 

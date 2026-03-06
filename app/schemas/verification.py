@@ -24,6 +24,7 @@ class DocumentVerifyResponse(BaseModel):
     confidence: float
     extracted_data: Dict[str, Any]
     fraud_indicators: List[str]
+    fraud_probability: Optional[float] = None
     message: Optional[str] = None
 
 
