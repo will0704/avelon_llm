@@ -5,6 +5,7 @@ Uses a trained sklearn model when available, with rule-based fallback.
 """
 from typing import Dict, Any, List, Optional
 from io import BytesIO
+from pathlib import Path
 import logging
 import os
 
@@ -62,12 +63,22 @@ class FraudDetectorService:
             logger.warning("joblib not available, ML fraud detection disabled")
             return False
         
-        if not self.model_path or not os.path.exists(self.model_path):
+        if not self.model_path:
             logger.info("No valid fraud model path, using rule-based detection only")
             return False
         
+        # Resolve relative paths against project root
+        model_file = Path(self.model_path)
+        if not model_file.is_absolute():
+            project_root = Path(__file__).resolve().parent.parent.parent
+            model_file = project_root / model_file
+        
+        if not model_file.exists():
+            logger.info(f"Fraud model file not found at {model_file}, using rule-based detection only")
+            return False
+        
         try:
-            self.model = joblib.load(self.model_path)
+            self.model = joblib.load(str(model_file))
             logger.info(f"Fraud detector ML model loaded from {self.model_path}")
             return True
         except Exception as e:
@@ -354,8 +365,8 @@ class FraudDetectorService:
                 flags.append(FraudFlag(
                     flag_type=FraudFlagType.MISSING_REQUIRED_FIELD,
                     description=f"Required field '{field}' not found for {document_type.value}",
-                    severity="high",
-                    confidence=0.9
+                    severity="medium",
+                    confidence=0.6
                 ))
         
         # Check name format

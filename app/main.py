@@ -16,6 +16,14 @@ from app.api.routes import health, verify, score
 
 settings = get_settings()
 
+# Authenticate with HuggingFace Hub if token is provided
+if settings.hf_token:
+    try:
+        from huggingface_hub import login
+        login(token=settings.hf_token, add_to_git_credential=False)
+    except ImportError:
+        pass  # huggingface_hub not installed, skip
+
 # Create FastAPI app
 app = FastAPI(
     title="Avelon LLM",
