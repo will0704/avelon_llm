@@ -36,6 +36,7 @@ class Settings(BaseSettings):
     
     # NER Configuration  
     ner_model_name: str = "dslim/bert-base-NER"  # Default HuggingFace model
+    hf_token: Optional[str] = None  # HuggingFace API token (optional, increases rate limits)
     
     # Processing Thresholds
     confidence_threshold: float = 0.7  # Minimum confidence for entity extraction

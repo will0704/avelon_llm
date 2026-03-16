@@ -3,6 +3,7 @@ Credit Scorer Service
 Uses XGBoost for credit score calculation with rule-based fallback.
 """
 from typing import Dict, Any, Optional, List
+from pathlib import Path
 import logging
 import os
 
@@ -51,13 +52,23 @@ class ScorerService:
             logger.warning("xgboost not available, using rule-based scoring only")
             return
         
-        if not self.model_path or not os.path.exists(self.model_path):
+        if not self.model_path:
             logger.info("No valid scorer model path, using rule-based scoring only")
+            return
+        
+        # Resolve relative paths against project root
+        model_file = Path(self.model_path)
+        if not model_file.is_absolute():
+            project_root = Path(__file__).resolve().parent.parent.parent
+            model_file = project_root / model_file
+        
+        if not model_file.exists():
+            logger.info(f"Scorer model file not found at {model_file}, using rule-based scoring only")
             return
         
         try:
             self.model = xgb.Booster()
-            self.model.load_model(self.model_path)
+            self.model.load_model(str(model_file))
             logger.info(f"XGBoost scorer loaded from {self.model_path}")
         except Exception as e:
             logger.warning(f"Failed to load scorer model: {e}")

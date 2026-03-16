@@ -6,6 +6,7 @@ Ready to extend for: PROOF_OF_INCOME, PROOF_OF_ADDRESS
 """
 from typing import Tuple, Optional, Dict
 from io import BytesIO
+from pathlib import Path
 import logging
 
 try:
@@ -104,8 +105,19 @@ class ClassifierService:
             logger.info("No model path configured, classifier will use heuristic fallback")
             return False
         
+        # Resolve relative paths against project root (parent of app/)
+        model_file = Path(self.model_path)
+        if not model_file.is_absolute():
+            project_root = Path(__file__).resolve().parent.parent.parent
+            model_file = project_root / model_file
+        
+        if not model_file.exists():
+            logger.warning(f"Model file not found at {model_file}")
+            return False
+        
         try:
-            checkpoint = torch.load(self.model_path, map_location=self.device, weights_only=False)
+            logger.info(f"Loading classifier model from {model_file}")
+            checkpoint = torch.load(str(model_file), map_location=self.device, weights_only=False)
             
             num_classes = checkpoint.get('config', {}).get('num_classes', 2)
             
