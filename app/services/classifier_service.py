@@ -73,6 +73,9 @@ class ClassifierService:
         'address': DocumentType.PROOF_OF_ADDRESS,
         'proof_of_address': DocumentType.PROOF_OF_ADDRESS,
         'utility_bill': DocumentType.PROOF_OF_ADDRESS,
+        # ID back
+        'government_id_back': DocumentType.GOVERNMENT_ID_BACK,
+        'id_back': DocumentType.GOVERNMENT_ID_BACK,
     }
     
     def __init__(self, model_path: Optional[str] = None):

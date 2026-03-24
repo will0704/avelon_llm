@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     hf_token: Optional[str] = None  # HuggingFace API token (optional, increases rate limits)
     
     # Processing Thresholds
-    confidence_threshold: float = 0.7  # Minimum confidence for entity extraction
+    confidence_threshold: float = 0.4  # Minimum confidence for document verification
     fraud_threshold: float = 0.4  # Threshold for flagging suspicious documents
 
     model_config = {

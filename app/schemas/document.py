@@ -45,5 +45,10 @@ class ExtractedDocumentData(BaseModel):
     utility_type: Optional[str] = None  # "electric", "water", "internet"
     billing_date: Optional[str] = None
     
+    # Government ID Back specific
+    has_signature: Optional[bool] = None
+    has_qr_code: Optional[bool] = None
+    emergency_contact: Optional[str] = None
+
     # Additional extracted fields
     extra: Dict[str, Any] = {}

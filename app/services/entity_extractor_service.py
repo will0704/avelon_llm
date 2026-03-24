@@ -240,6 +240,80 @@ class EntityExtractorService:
             }
         )
     
+    def extract_from_back_image(self, image_bytes: bytes) -> ExtractedDocumentData:
+        """
+        Extraction pipeline for the back of a government ID.
+
+        Detects QR code, signature presence, and emergency contact info.
+        Does NOT attempt to extract front-specific fields (name, DOB, id_number).
+        """
+        # Extract any text present on the back
+        text = self.extract_text(image_bytes)
+
+        # Detect QR code
+        has_qr, qr_data = self._detect_qr_code(image_bytes)
+
+        # Detect signature region
+        has_sig = self._detect_signature_region(image_bytes)
+
+        # Extract emergency contact phone number from OCR text
+        emergency_contact: Optional[str] = None
+        if text:
+            for pattern in self.PATTERNS.get("phone", []):
+                match = re.search(pattern, text)
+                if match:
+                    emergency_contact = match.group(0)
+                    break
+
+        extra: Dict[str, Any] = {"extraction_method": "easyocr_back"}
+        if qr_data:
+            extra["qr_data"] = qr_data
+
+        return ExtractedDocumentData(
+            raw_text=text or "",
+            has_qr_code=has_qr,
+            has_signature=has_sig,
+            emergency_contact=emergency_contact,
+            extra=extra,
+        )
+
+    def _detect_qr_code(self, image_bytes: bytes) -> tuple:
+        """Detect QR code presence and optionally decode its data."""
+        try:
+            import cv2
+            import numpy as np
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+            if img is None:
+                return False, None
+            detector = cv2.QRCodeDetector()
+            data, points, _ = detector.detectAndDecode(img)
+            if points is not None:
+                return True, data if data else None
+            return False, None
+        except Exception:
+            return False, None
+
+    def _detect_signature_region(self, image_bytes: bytes) -> bool:
+        """Heuristic: check for ink-like marks in the signature strip area."""
+        try:
+            import cv2
+            import numpy as np
+            nparr = np.frombuffer(image_bytes, np.uint8)
+            img = cv2.imdecode(nparr, cv2.IMREAD_GRAYSCALE)
+            if img is None:
+                return False
+            h, w = img.shape
+            # Signature strip is typically in the bottom third of the card
+            strip = img[int(h * 0.55):int(h * 0.85), int(w * 0.1):int(w * 0.9)]
+            _, thresh = cv2.threshold(strip, 100, 255, cv2.THRESH_BINARY_INV)
+            contours, _ = cv2.findContours(thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            # Filter for contours that look like handwriting strokes
+            sig_contours = [c for c in contours if cv2.contourArea(c) > 50]
+            return len(sig_contours) >= 3
+        except Exception:
+            return False
+
     def extract_to_document_data(self, text: str) -> ExtractedDocumentData:
         """
         Extract entities from pre-extracted text.

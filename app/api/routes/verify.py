@@ -1,6 +1,6 @@
 """
 Document verification endpoints.
-Handles document upload, classification, OCR, and fraud detection.
+Handles document upload, classification, OCR, fraud detection, and face matching.
 """
 import base64
 import logging
@@ -12,6 +12,7 @@ from app.schemas.verification import (
     CompleteVerificationRequest,
     CompleteVerificationResponse,
 )
+from app.schemas.face import FaceVerifyResponse
 from app.api.dependencies import verify_api_key
 from app.config import get_settings
 from app.services.preprocessing_service import get_preprocessing_service
@@ -19,6 +20,7 @@ from app.services.classifier_service import get_classifier_service
 from app.services.entity_extractor_service import get_entity_extractor_service
 from app.services.fraud_detector_service import get_fraud_detector_service
 from app.services.scorer_service import get_scorer_service
+from app.services.face_recognition_service import get_face_recognition_service, FaceRecognitionError
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -63,11 +65,19 @@ async def _verify_single_document(
     # 2. Classify document
     classified_type, confidence = classifier.classify(image_bytes)
 
-    type_match = classified_type == expected_type
+    # Back of gov ID is still classified as "government_id" by MobileNetV2 —
+    # treat it as a valid match so the confidence isn't penalised.
+    type_match = (
+        classified_type == expected_type
+        or (expected_type == DocumentType.GOVERNMENT_ID_BACK and classified_type == DocumentType.GOVERNMENT_ID)
+    )
     effective_confidence = confidence if type_match else confidence * 0.5
 
     # 3. Extract entities
-    extracted = extractor.extract_from_image(image_bytes)
+    if expected_type == DocumentType.GOVERNMENT_ID_BACK:
+        extracted = extractor.extract_from_back_image(image_bytes)
+    else:
+        extracted = extractor.extract_from_image(image_bytes)
     extracted_dict = extracted.model_dump(exclude_none=True)
 
     # 4. Fraud analysis
@@ -267,4 +277,68 @@ async def complete_verification(
         document_scores=document_scores,
         fraud_flags=all_fraud_flags,
         rejection_reasons=rejection_reasons,
+    )
+
+
+# ---------------------------------------------------------------------------
+# POST /verify/face
+# ---------------------------------------------------------------------------
+
+@router.post("/verify/face", response_model=FaceVerifyResponse)
+async def verify_face(
+    selfie_file: UploadFile = File(..., description="Selfie photo of the applicant"),
+    government_id_file: UploadFile = File(..., description="Government ID photo previously uploaded"),
+    api_key: str = Depends(verify_api_key),
+):
+    """
+    Compare a selfie against a government ID photo to verify identity.
+
+    Uses ArcFace (via DeepFace) with cosine similarity.
+    Returns passed=True when the faces match (distance < 0.4).
+
+    Args:
+        selfie_file: Live selfie captured during KYC
+        government_id_file: Government ID photo from document upload step
+
+    Returns:
+        FaceVerifyResponse with passed, score (0-1), confidence, and message
+    """
+    for upload in (selfie_file, government_id_file):
+        if not upload.content_type or not upload.content_type.startswith("image/"):
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid file type for '{upload.filename}'. Please upload an image (JPEG, PNG).",
+            )
+
+    selfie_bytes = await selfie_file.read()
+    gov_id_bytes = await government_id_file.read()
+
+    face_service = get_face_recognition_service()
+
+    if not face_service.is_available:
+        raise HTTPException(
+            status_code=503,
+            detail="Face recognition service is unavailable. Install: pip install insightface onnxruntime",
+        )
+
+    try:
+        passed, score, confidence, message = face_service.verify(selfie_bytes, gov_id_bytes)
+    except FaceRecognitionError as e:
+        error_messages = {
+            "NO_FACE_IN_SELFIE": "No face detected in the selfie. Please take a clear, well-lit photo facing the camera.",
+            "NO_FACE_IN_ID": "No face detected in the government ID. Please upload a clear photo ID.",
+            "MODEL_UNAVAILABLE": "Face recognition service is unavailable.",
+        }
+        detail = error_messages.get(e.error_code, str(e))
+        status_code = 503 if e.error_code == "MODEL_UNAVAILABLE" else 422
+        raise HTTPException(status_code=status_code, detail=detail)
+    except Exception:
+        logger.exception("Face verification failed unexpectedly")
+        raise HTTPException(status_code=500, detail="Internal face verification error")
+
+    return FaceVerifyResponse(
+        passed=passed,
+        score=score,
+        confidence=confidence,
+        message=message,
     )

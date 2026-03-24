@@ -46,6 +46,7 @@ class FraudDetectorService:
     # Expected fields for document types
     REQUIRED_FIELDS = {
         DocumentType.GOVERNMENT_ID: ["name", "id_number"],
+        DocumentType.GOVERNMENT_ID_BACK: [],  # No text fields required on back
         DocumentType.PROOF_OF_INCOME: ["name", "monthly_income"],
         DocumentType.PROOF_OF_ADDRESS: ["name", "address"],
     }

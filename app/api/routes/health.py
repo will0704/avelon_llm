@@ -10,6 +10,7 @@ from app.services.fraud_detector_service import get_fraud_detector_service
 from app.services.scorer_service import get_scorer_service
 from app.services.preprocessing_service import get_preprocessing_service
 from app.services.ocr_service import get_ocr_service
+from app.services.face_recognition_service import get_face_recognition_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -23,6 +24,7 @@ def _get_model_status() -> dict:
     scorer = get_scorer_service()
     preprocessing = get_preprocessing_service()
     ocr = get_ocr_service()
+    face = get_face_recognition_service()
 
     return {
         "document_classifier": classifier.is_loaded,
@@ -33,6 +35,7 @@ def _get_model_status() -> dict:
         "credit_scorer": True,             # rule-based, always available
         "credit_scorer_ml": scorer.ml_model_loaded,
         "preprocessing": preprocessing._cv2_available,
+        "face_recognition": face.is_available,
     }
 
 
