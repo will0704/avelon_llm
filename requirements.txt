@@ -20,8 +20,10 @@ httpx>=0.26.0
 torch>=2.1.0
 torchvision>=0.16.0
 transformers>=4.36.0
-scikit-learn>=1.4.0
-xgboost>=2.0.0
+# The committed fraud detector was serialized with scikit-learn 1.8.0.
+scikit-learn==1.8.0
+# 3.4.1 segfaults while loading the saved scorer model on Apple Silicon.
+xgboost==3.4.0
 opencv-python>=4.9.0.80
 Pillow>=10.2.0
 pytesseract>=0.3.10

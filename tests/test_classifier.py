@@ -71,6 +71,7 @@ class TestClassifierService:
         """Test class mapping includes all expected document types."""
         expected_types = {
             DocumentType.GOVERNMENT_ID,
+            DocumentType.GOVERNMENT_ID_BACK,
             DocumentType.PROOF_OF_INCOME,
             DocumentType.PROOF_OF_ADDRESS
         }

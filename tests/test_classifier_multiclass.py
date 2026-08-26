@@ -81,9 +81,14 @@ class TestMultiClassClassifier:
         assert hasattr(service_no_model, 'CLASS_MAPPING')
         mapping = service_no_model.CLASS_MAPPING
         assert isinstance(mapping, dict)
-        # Must cover all 3 document types
+        # Must cover every document type accepted by the verification API
         mapped_types = set(mapping.values())
-        expected = {DocumentType.GOVERNMENT_ID, DocumentType.PROOF_OF_INCOME, DocumentType.PROOF_OF_ADDRESS}
+        expected = {
+            DocumentType.GOVERNMENT_ID,
+            DocumentType.GOVERNMENT_ID_BACK,
+            DocumentType.PROOF_OF_INCOME,
+            DocumentType.PROOF_OF_ADDRESS,
+        }
         assert mapped_types == expected
 
     def test_four_class_model_loads(self):
