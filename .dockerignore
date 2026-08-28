@@ -1,0 +1,23 @@
+# app/models/ is deliberately NOT here — philid_classifier.pt, credit_scorer.json and
+# fraud_detector.pkl are loaded from disk at runtime.
+
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+
+# Classifier training images. 62MB, only used by train_classifier.py.
+data/
+
+notebooks/
+tests/
+docs/
+.pytest_cache/
+.git/
+.gitattributes
+.gitignore
+.env
+*.log
+.DS_Store
+CLAUDE.md
+.claude/
