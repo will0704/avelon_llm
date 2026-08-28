@@ -2,7 +2,10 @@
 # not at runtime — Cloud Run's filesystem is ephemeral, so anything fetched on first
 # use is re-fetched on every cold start (~800MB).
 
-FROM python:3.11-slim-bookworm
+# 3.12 is a floor, not a preference: requirements.txt pins xgboost==3.4.0, which
+# declares requires-python >=3.12. On 3.11 pip cannot resolve it at all. The Macs run
+# 3.14 so this only ever shows up in the container build.
+FROM python:3.12-slim-bookworm
 
 # Pinned to bookworm: trixie dropped libgl1-mesa-glx, which the previous base image
 # resolved to and could no longer install. libgl1 + libglib2.0-0 are opencv's runtime deps.
