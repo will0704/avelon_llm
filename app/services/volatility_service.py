@@ -261,6 +261,11 @@ class VolatilityService:
         recent = np.diff(np.log(prices[-(HORIZON_HOURS + 1):]))
         realized_24h = float(recent.std(ddof=1) * math.sqrt(PERIODS_PER_YEAR))
 
+        # A week of closes for the admin chart, thinned to keep the payload small.
+        window = prices[-168:]
+        step = max(1, len(window) // 48)
+        sparkline = [round(float(v), 2) for v in window[::step]]
+
         return {
             "horizon_days": horizon_days,
             "current_price_php": round(current_price, 2),
@@ -278,6 +283,7 @@ class VolatilityService:
                 "price_drop_to_liquidation": round(drop_to_liquidation, 4),
                 "probability": round(liquidation_probability, 4),
             },
+            "recent_prices": sparkline,
             "model_metadata": self.metadata,
         }
 

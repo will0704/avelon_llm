@@ -1,7 +1,7 @@
 """
 ETH volatility prediction schemas.
 """
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 from pydantic import BaseModel
 
@@ -33,4 +33,5 @@ class VolatilityResponse(BaseModel):
     price_range_68: PriceBand
     price_range_95: PriceBand
     liquidation: LiquidationRisk
+    recent_prices: List[float]       # last 7 days of closes, thinned for charting
     model_metadata: Optional[Dict[str, Any]] = None
