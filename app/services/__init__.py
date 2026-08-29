@@ -25,6 +25,10 @@ from app.services.fraud_detector_service import (
     FraudDetectorService,
     get_fraud_detector_service,
 )
+from app.services.volatility_service import (
+    VolatilityService,
+    get_volatility_service,
+)
 
 __all__ = [
     # Preprocessing
@@ -46,4 +50,7 @@ __all__ = [
     # Scorer
     "ScorerService",
     "get_scorer_service",
+    # Volatility
+    "VolatilityService",
+    "get_volatility_service",
 ]

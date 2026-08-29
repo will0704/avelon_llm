@@ -11,6 +11,7 @@ from app.services.scorer_service import get_scorer_service
 from app.services.preprocessing_service import get_preprocessing_service
 from app.services.ocr_service import get_ocr_service
 from app.services.face_recognition_service import get_face_recognition_service
+from app.services.volatility_service import get_volatility_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter()
@@ -25,6 +26,7 @@ def _get_model_status() -> dict:
     preprocessing = get_preprocessing_service()
     ocr = get_ocr_service()
     face = get_face_recognition_service()
+    volatility = get_volatility_service()
 
     return {
         "document_classifier": classifier.is_loaded,
@@ -36,6 +38,8 @@ def _get_model_status() -> dict:
         "credit_scorer_ml": scorer.ml_model_loaded,
         "preprocessing": preprocessing._cv2_available,
         "face_recognition": face.is_available,
+        "volatility_predictor": True,      # EWMA fallback, always available
+        "volatility_predictor_ml": volatility.is_loaded,
     }
 
 
