@@ -62,7 +62,7 @@ avelon_llm/
 | **NER** | BERT (HuggingFace) | ✅ Ready |
 | **Fraud Detector** | OpenCV + XGBoost | ⏳ Pending |
 | **Credit Scorer** | XGBoost | ⏳ Pending |
-| **ETH Volatility Predictor** | LSTM / Time-Series Model | 📋 Planned |
+| **ETH Volatility Predictor** | PyTorch LSTM (hourly ETH/PHP) | ✅ Trained |
 
 ## 🔌 API Endpoints
 

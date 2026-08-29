@@ -7,12 +7,13 @@ AI Microservice for:
 - Named Entity Recognition
 - Fraud Detection
 - Credit Scoring
+- ETH Volatility Prediction
 """
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 from app.config import get_settings
-from app.api.routes import health, verify, score
+from app.api.routes import health, verify, score, predict
 
 settings = get_settings()
 
@@ -50,6 +51,7 @@ app.add_middleware(
 app.include_router(health.router, tags=["Health"])
 app.include_router(verify.router, prefix="/api/v1", tags=["Verification"])
 app.include_router(score.router, prefix="/api/v1", tags=["Scoring"])
+app.include_router(predict.router, prefix="/api/v1", tags=["Prediction"])
 
 
 @app.get("/")

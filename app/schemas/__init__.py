@@ -14,6 +14,7 @@ from app.schemas.verification import (
     CompleteVerificationResponse,
 )
 from app.schemas.fraud import FraudFlag, FraudFlagType, FraudResult
+from app.schemas.volatility import PriceBand, LiquidationRisk, VolatilityResponse
 
 __all__ = [
     # Document
