@@ -21,11 +21,12 @@ async def predict_volatility(
     api_key: str = Depends(verify_api_key),
 ):
     """
-    Forecast ETH/PHP volatility and the liquidation risk it implies.
+    Forecast ETH/PHP volatility for advisory research.
 
     The LSTM predicts forward annualized realized volatility from the last 30 days
-    of price action. That is scaled to the horizon and used to price the chance the
-    borrower's collateral ratio falls below the liquidation threshold.
+    of price action. The legacy terminal-threshold scenario is returned only for
+    research compatibility. Because collateral and debt are both ETH, it is not
+    used to authorize liquidation.
 
     Args:
         horizon_days: Forecast window, 1-30 days
@@ -33,7 +34,7 @@ async def predict_volatility(
         min_ratio_bps: CollateralManager.minCollateralRatio, basis points
 
     Returns:
-        Volatility forecast, projected price bands, and liquidation probability
+        Volatility forecast, projected price bands, and an advisory terminal scenario
     """
     service = get_volatility_service()
 

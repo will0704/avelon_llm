@@ -3,6 +3,7 @@ Health check endpoints for service monitoring.
 """
 import logging
 from fastapi import APIRouter
+from fastapi.responses import JSONResponse
 
 from app.services.classifier_service import get_classifier_service
 from app.services.entity_extractor_service import get_entity_extractor_service
@@ -51,9 +52,19 @@ async def health_check():
     """
     models = _get_model_status()
 
+    required_keys = [
+        "document_classifier",
+        "ner_extractor",
+        "ocr_engine",
+        "preprocessing",
+        "face_recognition",
+    ]
+    degraded = not all(models.get(key, False) for key in required_keys)
+
     return {
-        "status": "healthy",
+        "status": "degraded" if degraded else "healthy",
         "service": "avelon-llm",
+        "accepting_kyc": not degraded,
         "models_loaded": models,
     }
 
@@ -67,11 +78,24 @@ async def readiness_check():
     models = _get_model_status()
 
     # Core services that must be available for the service to accept traffic
-    required_keys = ["document_classifier", "ner_extractor", "fraud_detector", "credit_scorer"]
+    required_keys = [
+        "document_classifier",
+        "ner_extractor",
+        "ocr_engine",
+        "preprocessing",
+        "face_recognition",
+    ]
     models_ready = all(models.get(k, False) for k in required_keys)
 
-    return {
+    payload = {
         "ready": models_ready,
         "models": models,
+        "required": required_keys,
+        "fallbacks": {
+            "fraud_detector": models["fraud_detector"] and not models["fraud_detector_ml"],
+            "credit_scorer": models["credit_scorer"] and not models["credit_scorer_ml"],
+            "volatility_predictor": models["volatility_predictor"] and not models["volatility_predictor_ml"],
+        },
         "message": "All systems ready" if models_ready else "Some required models are not loaded",
     }
+    return JSONResponse(content=payload, status_code=200 if models_ready else 503)

@@ -327,6 +327,8 @@ async def verify_face(
         error_messages = {
             "NO_FACE_IN_SELFIE": "No face detected in the selfie. Please take a clear, well-lit photo facing the camera.",
             "NO_FACE_IN_ID": "No face detected in the government ID. Please upload a clear photo ID.",
+            "MULTIPLE_FACES_IN_SELFIE": "The selfie must contain exactly one face.",
+            "MULTIPLE_FACES_IN_ID": "The government ID image must contain exactly one face.",
             "MODEL_UNAVAILABLE": "Face recognition service is unavailable.",
         }
         detail = error_messages.get(e.error_code, str(e))

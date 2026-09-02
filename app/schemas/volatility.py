@@ -13,11 +13,13 @@ class PriceBand(BaseModel):
 
 
 class LiquidationRisk(BaseModel):
-    """Chance the stake breaches CollateralManager.minCollateralRatio before the horizon."""
+    """Legacy terminal-price scenario; advisory only, not a liquidation trigger."""
     stake_ratio_bps: int
     min_ratio_bps: int
     price_drop_to_liquidation: float  # fraction, e.g. 0.125 = a 12.5% fall
     probability: float                # 0.0 - 1.0
+    interpretation: str
+    advisory_only: bool = True
 
 
 class VolatilityResponse(BaseModel):
@@ -35,3 +37,4 @@ class VolatilityResponse(BaseModel):
     liquidation: LiquidationRisk
     recent_prices: List[float]       # last 7 days of closes, thinned for charting
     model_metadata: Optional[Dict[str, Any]] = None
+    advisory_only: bool = True
