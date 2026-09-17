@@ -3,8 +3,10 @@ Document verification endpoints.
 Handles document upload, classification, OCR, fraud detection, and face matching.
 """
 import base64
+import io
 import logging
 from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from PIL import Image
 
 from app.schemas.document import DocumentType
 from app.schemas.verification import (
@@ -26,6 +28,30 @@ logger = logging.getLogger(__name__)
 router = APIRouter()
 
 settings = get_settings()
+
+# Matches the backend's own upload cap, with room for multipart overhead
+MAX_UPLOAD_BYTES = 15 * 1024 * 1024
+UNREADABLE = "The image could not be read. Retake the photo and upload it again."
+
+
+def _is_readable_image(data: bytes) -> bool:
+    """True when PIL can decode the whole image, not just its header."""
+    if not data:
+        return False
+    try:
+        with Image.open(io.BytesIO(data)) as img:
+            img.load()
+        return True
+    except Exception:
+        return False
+
+
+async def _read_upload(upload: UploadFile) -> bytes:
+    """Read at most the size limit, so an oversized upload is refused without buffering it all."""
+    data = await upload.read(MAX_UPLOAD_BYTES + 1)
+    if len(data) > MAX_UPLOAD_BYTES:
+        raise HTTPException(status_code=413, detail="The image is too large. Upload a photo under 15 MB.")
+    return data
 
 
 # ---------------------------------------------------------------------------
@@ -156,7 +182,9 @@ async def verify_document(
             detail="Invalid file type. Please upload an image (JPEG, PNG).",
         )
 
-    image_bytes = await file.read()
+    image_bytes = await _read_upload(file)
+    if not _is_readable_image(image_bytes):
+        raise HTTPException(status_code=422, detail=UNREADABLE)
 
     try:
         result = await _verify_single_document(image_bytes, document_type)
@@ -310,8 +338,10 @@ async def verify_face(
                 detail=f"Invalid file type for '{upload.filename}'. Please upload an image (JPEG, PNG).",
             )
 
-    selfie_bytes = await selfie_file.read()
-    gov_id_bytes = await government_id_file.read()
+    selfie_bytes = await _read_upload(selfie_file)
+    gov_id_bytes = await _read_upload(government_id_file)
+    if not _is_readable_image(selfie_bytes) or not _is_readable_image(gov_id_bytes):
+        raise HTTPException(status_code=422, detail=UNREADABLE)
 
     face_service = get_face_recognition_service()
 
@@ -327,6 +357,8 @@ async def verify_face(
         error_messages = {
             "NO_FACE_IN_SELFIE": "No face detected in the selfie. Please take a clear, well-lit photo facing the camera.",
             "NO_FACE_IN_ID": "No face detected in the government ID. Please upload a clear photo ID.",
+            "MULTIPLE_FACES_IN_SELFIE": "The selfie must contain exactly one face.",
+            "MULTIPLE_FACES_IN_ID": "The government ID image must contain exactly one face.",
             "MODEL_UNAVAILABLE": "Face recognition service is unavailable.",
         }
         detail = error_messages.get(e.error_code, str(e))

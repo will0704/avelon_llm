@@ -181,18 +181,18 @@ class TestFaceRecognitionService:
 
         assert passed is False
 
-    def test_uses_highest_confidence_face_when_multiple_detected(self):
-        """If multiple faces detected, the one with highest det_score is used."""
+    def test_rejects_multiple_faces_in_selfie(self):
+        """A group photo must not be silently reduced to one selected face."""
         svc = _make_svc(available=True)
         low_conf = _make_face([0.0, 1.0, 0.0], det_score=0.3)   # orthogonal — would fail
         high_conf = _make_face([1.0, 0.0, 0.0], det_score=0.95)  # identical — would pass
         id_face = _make_face([1.0, 0.0, 0.0])
         svc._app.get.side_effect = [[low_conf, high_conf], [id_face]]
 
-        with patch("cv2.imdecode", side_effect=_fake_decode):
-            passed, _, _, _ = svc.verify(b"selfie", b"gov_id")
+        with patch("cv2.imdecode", side_effect=_fake_decode), pytest.raises(FaceRecognitionError) as exc:
+            svc.verify(b"selfie", b"gov_id")
 
-        assert passed is True
+        assert exc.value.error_code == "MULTIPLE_FACES_IN_SELFIE"
 
     def test_get_face_recognition_service_returns_singleton(self):
         _mod._face_service_instance = None

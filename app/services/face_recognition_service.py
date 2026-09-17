@@ -118,9 +118,19 @@ class FaceRecognitionService:
                 "NO_FACE_IN_ID",
             )
 
-        # Use the highest-confidence face from each image
-        selfie_face = max(selfie_faces, key=lambda f: f.det_score)
-        id_face = max(id_faces, key=lambda f: f.det_score)
+        if len(selfie_faces) != 1:
+            raise FaceRecognitionError(
+                "The selfie must contain exactly one face. Retake it without other people or face images in frame.",
+                "MULTIPLE_FACES_IN_SELFIE",
+            )
+        if len(id_faces) != 1:
+            raise FaceRecognitionError(
+                "The government ID image must contain exactly one face.",
+                "MULTIPLE_FACES_IN_ID",
+            )
+
+        selfie_face = selfie_faces[0]
+        id_face = id_faces[0]
 
         # Cosine similarity (embeddings are already L2-normalised)
         similarity: float = float(np.dot(selfie_face.normed_embedding, id_face.normed_embedding))

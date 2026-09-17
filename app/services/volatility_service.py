@@ -282,9 +282,12 @@ class VolatilityService:
                 "min_ratio_bps": min_ratio_bps,
                 "price_drop_to_liquidation": round(drop_to_liquidation, 4),
                 "probability": round(liquidation_probability, 4),
+                "interpretation": "Terminal-price threshold scenario only; not first-passage probability and not used for ETH/ETH liquidation.",
+                "advisory_only": True,
             },
             "recent_prices": sparkline,
             "model_metadata": self.metadata,
+            "advisory_only": True,
         }
 
 
